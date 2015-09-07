@@ -40,6 +40,8 @@ The schema for our database is slightly different than the json format of the or
 
 1. Some of these queries may be very intellectually challenging! Be sure to use Google in an academically honest way if you ever get stuck.
 
+1. Dataset is a subset of the entire yelp database and is not holistically consistent - there may be numbers that don't add up among tables, and it's ok.
+
 ###Writing queries
 Now that we've explored the structure of our database, let's start writing queries! Please write your solution for each of the queries below in the `YelpQueries.java` file included in the hw1 directory. 
 For example, consider a hypothetical question 0: "What is the total number of reviews in our dataset?" It should look like this:
@@ -51,14 +53,14 @@ For example, consider a hypothetical question 0: "What is the total number of re
 
 Create views for the following queries:
 
-1. Find the average number of ratings of all people who have rated less than 10 times.
-2. What are the names of the accounts created after November 2014 and have rated more than 50 times?
-3. What are the names and ratings of all businesses rated higher than 3 stars in Pittsburgh?
+1. Find the average number of reviews left by all users who have rated less than 10 times.
+2. What are the names of the users created after November 2014 and have left more than 50 reviews?
+3. What are the names and stars of all businesses rated higher than 3 stars in Pittsburgh?
 4. What is the name of the lowest rated business in Las Vegas with at least 500 reviews?
-5. What are the names of the top 5 businesses that have the most check-ins on Sunday?
+5. What are the names of the 5 businesses that have the most check-ins on Sunday?
 6. What day of the week (integer) do people check-in the most on?
 7. Find the names of the businesses reviewed by the user who has made the most reviews.
-8. Find the average rating of the top 10% most rated businesses in Edinburgh.
+8. Find the average stars of the top 10% most rated businesses in Edinburgh.
 9. What are the names of the users that have ‘..’ in their name?
 10. (Follow up to question 9) Which city has the most businesses that have been rated by these people?
 
