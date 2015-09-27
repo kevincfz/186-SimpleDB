@@ -10,6 +10,7 @@ public class Filter extends Operator {
     private static final long serialVersionUID = 1L;
     private Predicate pred;
     private DbIterator child;
+    private TupleDesc td;
 
     /**
      * Constructor accepts a predicate to apply and a child operator to read
@@ -21,33 +22,36 @@ public class Filter extends Operator {
      *            The child operator
      */
     public Filter(Predicate p, DbIterator child) {
-        // IMPLEMENT ME
+        this.pred = p;
+        this.child = child;
+        this.td = child.getTupleDesc();
+
     }
 
     public Predicate getPredicate() {
-        // IMPLEMENT ME
-        return null;
+        return pred;
     }
 
     /**
      * Returns the schema of the operator.
      */
     public TupleDesc getTupleDesc() {
-        // IMPLEMENT ME
-        return null;
+        return td;
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
-        // IMPLEMENT ME
+        child.open();
+        super.open();
     }
 
     public void close() {
-        // IMPLEMENT ME
+        super.close();
+        child.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // IMPLEMENT ME
+        child.rewind();
     }
 
     /**
@@ -61,7 +65,12 @@ public class Filter extends Operator {
      */
     protected Tuple fetchNext() throws NoSuchElementException,
             TransactionAbortedException, DbException {
-        // IMPLEMENT ME
+        while (child.hasNext()) {
+            Tuple t = child.next();
+            if (pred.filter(t)) {
+                return t;
+            }
+        }
         return null;
     }
 

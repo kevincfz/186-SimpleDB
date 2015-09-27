@@ -83,3 +83,5 @@ warehouse/
 TempStatsStore/
 sql/hive-thriftserver/test_warehouses
 sql/core/partition-*
+*.json
+*.db
