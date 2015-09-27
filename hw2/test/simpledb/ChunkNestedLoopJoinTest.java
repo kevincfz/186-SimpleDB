@@ -60,7 +60,7 @@ public class ChunkNestedLoopJoinTest extends SimpleDbTestBase {
    */
   @Test public void gtJoin() throws Exception {
     JoinPredicate pred = new JoinPredicate(0, Predicate.Op.GREATER_THAN, 0);
-    ChunkNestedLoopJoin op = new ChunkNestedLoopJoin(pred, scan1, scan2, 1);
+    ChunkNestedLoopJoin op = new ChunkNestedLoopJoin(pred, scan1, scan2, 2);
     op.open();
     gtJoin.open();
     TestUtil.matchAllTuples(gtJoin, op);
