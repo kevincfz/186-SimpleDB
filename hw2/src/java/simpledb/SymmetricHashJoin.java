@@ -105,16 +105,26 @@ public class SymmetricHashJoin extends Operator {
     private transient Tuple matchedTuple = null;
     private transient Tuple currentTuple = null;
 
-    private Tuple probleList() throws TransactionAbortedException, DbException {
+    private Tuple processList() throws TransactionAbortedException, DbException {
         matchedTuple = listIterator.next();
-        int td1n = matchedTuple.getTupleDesc().numFields();
-        int td2n = currentTuple.getTupleDesc().numFields();
+        Tuple leftTuple;
+        Tuple rightTuple;
+        if (inner == child1) {
+            leftTuple = currentTuple;
+            rightTuple = matchedTuple;
+        } else {
+            leftTuple = matchedTuple;
+            rightTuple = currentTuple;
+        }
+
+        int td1n = leftTuple.getTupleDesc().numFields();
+        int td2n = rightTuple.getTupleDesc().numFields();
 
         Tuple t = new Tuple(comboTD);
         for (int i = 0; i < td1n; i++)
-            t.setField(i, matchedTuple.getField(i));
+            t.setField(i, leftTuple.getField(i));
         for (int i = 0; i < td2n; i++)
-            t.setField(td1n + i, currentTuple.getField(i));
+            t.setField(td1n + i, rightTuple.getField(i));
         return t;
     }
 
@@ -153,7 +163,7 @@ public class SymmetricHashJoin extends Operator {
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         if (listIterator != null) {
             if (listIterator.hasNext()) {
-                return probleList();
+                return processList();
             } else {
                 if (inner.hasNext() && outter.hasNext()) {
                     switchRelations();
@@ -176,7 +186,7 @@ public class SymmetricHashJoin extends Operator {
             }
             listIterator = list.iterator();
 
-            return probleList();
+            return processList();
         }
         if (outter.hasNext()) {
             switchRelations();
