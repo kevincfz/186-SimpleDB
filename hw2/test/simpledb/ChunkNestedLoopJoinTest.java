@@ -77,6 +77,17 @@ public class ChunkNestedLoopJoinTest extends SimpleDbTestBase {
     TestUtil.matchAllTuples(eqJoin, op);
   }
 
+
+    /**
+     * Unit test for ChunkNestedLoopJoin.fetchNext() using an = predicate
+     */
+    @Test public void biggerChunk() throws Exception {
+        JoinPredicate pred = new JoinPredicate(0, Predicate.Op.GREATER_THAN, 0);
+        ChunkNestedLoopJoin op = new ChunkNestedLoopJoin(pred, scan1, scan2, 4);
+        op.open();
+        gtJoin.open();
+        TestUtil.matchAllTuples(gtJoin, op);
+    }
   /**
    * JUnit suite target
    */

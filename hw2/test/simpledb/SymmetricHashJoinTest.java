@@ -21,6 +21,9 @@ public class SymmetricHashJoinTest extends SimpleDbTestBase {
     TupleIterator scan1;
     TupleIterator scan2;
     TupleIterator symHashJoin;
+    TupleIterator longscan1;
+    TupleIterator shortscan1;
+    TupleIterator longshort;
 
     /**
      * Initialize each unit test
@@ -41,6 +44,22 @@ public class SymmetricHashJoinTest extends SimpleDbTestBase {
             new int[] { 1, 2, 1, 2, 3,
                         3, 4, 3, 4, 5,
                         5, 6, 5, 6, 7 });
+        this.longscan1 = TestUtil.createTupleList(width1,
+                new int[] { 1, 2,
+                        3, 4,
+                        5, 6,
+                        7, 8,
+                        1, 3});
+        this.shortscan1 = TestUtil.createTupleList(width2,
+                new int[]{1, 2, 3,
+                        2, 3, 4,
+                        3, 4, 5,
+                        7, 1, 2});
+        this.longshort = TestUtil.createTupleList(width1 + width2,
+                new int[]{1, 2, 1, 2, 3,
+                        3, 4, 3, 4, 5,
+                        7, 8, 7, 1, 2,
+                        1, 3, 1, 2, 3});
     }
 
     /**
@@ -61,8 +80,22 @@ public class SymmetricHashJoinTest extends SimpleDbTestBase {
         JoinPredicate pred = new JoinPredicate(0, Predicate.Op.EQUALS, 0);
         SymmetricHashJoin op = new SymmetricHashJoin(pred, scan1, scan2);
         op.open();
+        Tuple a = op.fetchNext();
+
         symHashJoin.open();
         TestUtil.matchAllTuples(symHashJoin, op);
+    }
+
+    /**
+     * Unit test for SymmetricHashJoin.getNext() using an = predicate
+     */
+    @Test public void longShort() throws Exception {
+        JoinPredicate pred = new JoinPredicate(0, Predicate.Op.EQUALS, 0);
+        SymmetricHashJoin op = new SymmetricHashJoin(pred, longscan1, shortscan1);
+        op.open();
+        Tuple a = op.fetchNext();
+        longshort.open();
+        TestUtil.matchAllTuples(longshort, op);
     }
 
     private static final int COLUMNS = 2;
