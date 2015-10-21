@@ -115,23 +115,17 @@ private[sql] class DiskPartition (
       var byteArray: Array[Byte] = null
 
       override def next() = {
-        if (!hasNext) {
-          null
-        }
-        else {
-            if (!currentIterator.hasNext) {
-            	fetchNextChunk
-            }
-            currentIterator.next
-        }
-
+        currentIterator.next()
       }
 
-      override def hasNext() = {
-      	if (!chunkSizes.isEmpty()) {
+      override def hasNext = {
+        if (currentIterator.hasNext) {
+          true
+        } else if (fetchNextChunk()) {
             true
-      	}
-        else{false}
+      	} else {
+          false
+        }
       }
 
       /**
@@ -141,10 +135,9 @@ private[sql] class DiskPartition (
        * @return true unless the iterator is empty.
        */
       private[this] def fetchNextChunk(): Boolean = {
-      	if (hasNext()) {
-      		byteArray = CS186Utils.getNextChunkBytes(inStream, chunkSizes.get(0), byteArray)
+      	if (chunkSizeIterator.hasNext) {
+      		byteArray = CS186Utils.getNextChunkBytes(inStream, chunkSizeIterator.next(), byteArray)
       		currentIterator = getListFromBytes(byteArray).iterator().asScala
-      		chunkSizes.remove(0)
       		true
       	}
         else {false}
@@ -181,7 +174,7 @@ private[sql] object DiskHashedRelation {
 
   /**
    * Given an input iterator, partitions each row into one of a number of [[DiskPartition]]s
-   * and constructors a [[DiskHashedRelation]].
+   * and construct a [[DiskHashedRelation]].
    *
    * This executes the first phase of external hashing -- using a course-grained hash function
    * to partition the tuples to disk.
@@ -216,11 +209,6 @@ private[sql] object DiskHashedRelation {
           var index: Int = silt.hashCode()%size
           buffy(index).insert(raw)
         }
-        """for (d <- 0 until 63) {
-        	if (buffy.get(d).filename.equals(String.valueOf(index))) {
-        		buffy.get(d).insert(raw)
-        	}
-        }"""
     }
     for (b <- 0 until size) {buffy(b).closeInput}
     var dhr: DiskHashedRelation = new GeneralDiskHashedRelation(buffy)

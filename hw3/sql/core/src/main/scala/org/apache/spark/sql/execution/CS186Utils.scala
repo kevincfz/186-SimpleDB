@@ -105,8 +105,14 @@ object CS186Utils {
    * @return
    */
   def getUdfFromExpressions(expressions: Seq[Expression]): ScalaUdf = {
-    // IMPLEMENT ME
-    null
+    var lastUdf: ScalaUdf = null
+    for (exp <- expressions) {
+      exp match {
+        case exp: ScalaUdf => lastUdf = exp
+        case  _ => ()
+      }
+    }
+    lastUdf
   }
 
   /**
@@ -188,13 +194,23 @@ object CachingIteratorGenerator {
         val cache: JavaHashMap[Row, Row] = new JavaHashMap[Row, Row]()
 
         def hasNext() = {
-          // IMPLEMENT ME
-          false
+            input.hasNext
         }
 
         def next() = {
-          // IMPLEMENT ME
-          null
+          if (!hasNext) {
+            null
+          }
+          var raw: Row = input.next()
+          var pre: Row = preUdfProjection(raw)
+          var post: Row = postUdfProjection(raw)
+          var col: Row = cacheKeyProjection(raw)
+          if (!cache.keySet.contains(col)) {
+            cache.put(col, udfProject(col))
+          }
+          var mid: Row = cache.get(col)
+          var res: Row = Row.fromSeq(pre++mid++post)
+          res
         }
       }
     }
