@@ -36,12 +36,13 @@ protected [sql] final class GeneralDiskHashedRelation(partitions: Array[DiskPart
     extends DiskHashedRelation with Serializable {
 
   override def getIterator() = {
-    // IMPLEMENT ME
-    null
+    partitions.iterator
   }
 
   override def closeAllPartitions() = {
-    // IMPLEMENT ME
+    for(part <- 0 until partitions.size) {
+    	partitions(part).closePartition
+    }
   }
 }
 
@@ -63,7 +64,15 @@ private[sql] class DiskPartition (
    * @param row the [[Row]] we are adding
    */
   def insert(row: Row) = {
-    // IMPLEMENT ME
+    if (inputClosed) {
+      throw new SparkException("Should not be reading from file before closing input. Bad things will happen!")
+    }
+    //Suggested to clear data after spilling the partition to the disk.
+    data.add(row)
+    if (measurePartitionSize() > blockSize) {
+        spillPartitionToDisk()
+        data.clear()
+    }
   }
 
   /**
@@ -106,13 +115,23 @@ private[sql] class DiskPartition (
       var byteArray: Array[Byte] = null
 
       override def next() = {
-        // IMPLEMENT ME
-        null
+        if (!hasNext) {
+          null
+        }
+        else {
+            if (!currentIterator.hasNext) {
+            	fetchNextChunk
+            }
+            currentIterator.next
+        }
+
       }
 
       override def hasNext() = {
-        // IMPLEMENT ME
-        false
+      	if (!chunkSizes.isEmpty()) {
+            true
+      	}
+        else{false}
       }
 
       /**
@@ -122,8 +141,13 @@ private[sql] class DiskPartition (
        * @return true unless the iterator is empty.
        */
       private[this] def fetchNextChunk(): Boolean = {
-        // IMPLEMENT ME
-        false
+      	if (hasNext()) {
+      		byteArray = CS186Utils.getNextChunkBytes(inStream, chunkSizes.get(0), byteArray)
+      		currentIterator = getListFromBytes(byteArray).iterator().asScala
+      		chunkSizes.remove(0)
+      		true
+      	}
+        else {false}
       }
     }
   }
@@ -136,7 +160,10 @@ private[sql] class DiskPartition (
    * also be closed.
    */
   def closeInput() = {
-    // IMPLEMENT ME
+    if (data.size > 0) {
+    	spillPartitionToDisk()
+    }
+    outStream.close()
     inputClosed = true
   }
 
@@ -173,7 +200,30 @@ private[sql] object DiskHashedRelation {
                 keyGenerator: Projection,
                 size: Int = 64,
                 blockSize: Int = 64000) = {
-    // IMPLEMENT ME
-    null
+    if(!input.hasNext) {
+        null
+    }
+
+    var buffy: Array[DiskPartition] = new Array[DiskPartition](size)
+    for (a <- 0 until size) {
+    	var dp: DiskPartition = new DiskPartition(String.valueOf(a), blockSize)
+    	buffy(a) = dp
+    }
+
+    for (raw <- input) {
+    	if (raw != null) {
+          var silt: Row = keyGenerator.apply(raw)
+          var index: Int = silt.hashCode()%size
+          buffy(index).insert(raw)
+        }
+        """for (d <- 0 until 63) {
+        	if (buffy.get(d).filename.equals(String.valueOf(index))) {
+        		buffy.get(d).insert(raw)
+        	}
+        }"""
+    }
+    for (b <- 0 until size) {buffy(b).closeInput}
+    var dhr: DiskHashedRelation = new GeneralDiskHashedRelation(buffy)
+    dhr
   }
 }
