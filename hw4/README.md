@@ -10,8 +10,8 @@ In this project, you will implement a query optimizer on top of SimpleDB. The ma
 selectivity estimation framework and a cost-based optimizer based on the Selinger cost-based optimizer discussed in class. The remainder of this document describes what is involved in adding optimizer support and provides a basic outline of how you can add this support to your database. As with the previous projects, we recommend that you start as early as possible.
 
 ## 0. A few notes
-- SimpleDB is, unfortunately, not simple. A big part of this project is to be able to read javadoc and source code, and
- to be able to understand not only the parts you need to implement, but also already implemented classes and methods.
+- SimpleDB is, unfortunately, not simple. A big part of this project is to be able to read javadoc and source code, and to be able to understand not only the parts you need to implement, but also already implemented classes and methods.
+  - However, **PLEASE DO NOT** change any of the interfaces and classes given unless we specify for you to do so! If you do change an external file, then you may pass the local tests, but **you will fail** our autograder!
 - If there's anything that doesn't make sense (anything, from tests cases to method descriptions), try to first *guess*
 what's going on, and if things still don't make sense, post what you think is happening and what's going wrong on
 Piazza. Tag your questions like "[HW4 P1]" for this homework's "Exercise 1"
@@ -235,7 +235,7 @@ Translating the algorithm to the join node list form mentioned above, an outline
 
 To help you implement this algorithm, we have provided several classes and methods to assist you. First, the method
 `enumerateSubsets(Vector v, int size)` in `JoinOptimizer.java` will return a set of all of the subsets of `v` of size 
-size. This method is not particularly efficient; you can try to implement a more efficient enumerator by yourself, but
+`size`. This method is not particularly efficient; you can try to implement a more efficient enumerator by yourself, but
 it's not necessary for this project.
 
 Second, we have provided the method:
@@ -252,8 +252,8 @@ way to join `joinToRemove` to `joinSet - {joinToRemove}`. It returns this best m
 includes the cost, cardinality, and best join ordering (as a vector). `computeCostAndCardOfSubplan` may return `null`,
 if no plan can be found (because, for example, there is no linear join that is possible), or if the cost of all plans
 is greater than the `bestCostSoFar` argument. The method uses a cache of previous joins called `pc` (`optjoin` in the 
-psuedocode above) to quickly lookup the fastest way to join `joinSet - {joinToRemove}`. The other arguments (`stats`
-and `filterSelectivities`) are passed into the `orderJoins` method that you must implement as a part of Exercise 3, 
+pseudocode above) to quickly lookup the fastest way to join `joinSet - {joinToRemove}`. The other arguments (`stats`
+and `filterSelectivities`) are passed into the `orderDynamicProgrammingJoins` method that you must implement as a part of Exercise 4, 
 and are explained below. This method essentially performs lines 6-8 of the psuedocode described earlier.
 
 Third, we have provided a class `PlanCache` that can be used to cache the best way to join a subset of the joins 
@@ -264,8 +264,8 @@ considered so far in your implementation of the Selinger-style optimizer (an ins
 
 In `JoinOptimizer.java`, implement the method:
 
-    Vector orderJoins(HashMap<String, TableStats> stats, 
-                      HashMap<String, Double> filterSelectivities)
+    Vector orderDynamicProgrammingJoins(HashMap<String, TableStats> stats, 
+                                        HashMap<String, Double> filterSelectivities)
 
 This method should operate on the `joins` class member, returning a new `Vector` that specifies the order in which 
 joins should be done. Item `0` of this vector indicates the bottom-most join in a linear plan. Adjacent joins in the 
