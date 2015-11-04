@@ -27,7 +27,7 @@ public interface Field extends Serializable{
      * @return type of this field
      */
     public Type getType();
-    
+
     /**
      * Hash code.
      * Different Field objects representing the same value should probably

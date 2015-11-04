@@ -62,6 +62,8 @@ public class TableStats {
     private final int ioCostPerPage;
     private final TupleDesc tupleDesc;
     private int numPages, numTuples;
+    private ArrayList<Object> stats;
+
 
     // TODO: add any fields that you may need
 
@@ -88,10 +90,20 @@ public class TableStats {
         tupleDesc = file.getTupleDesc();
         numPages = ((HeapFile) file).numPages();
         numTuples = 0;
+        stats = new ArrayList<>();
 
         int numFields = tupleDesc.numFields();
 
-        // TODO: what goes here?
+        for (int i = 0; i < numFields; i++) {
+            Type type = tupleDesc.getFieldType(i);
+            if (type == Type.INT_TYPE) {
+                IntStatistics intStat = new IntStatistics(NUM_HIST_BINS);
+                stats.add(intStat);
+            } else if (type == Type.STRING_TYPE) {
+                StringHistogram stringHist = new StringHistogram(NUM_HIST_BINS);
+                stats.add(stringHist);
+            }
+        }
 
         final DbFileIterator iter = file.iterator(null);
         try {
@@ -101,7 +113,18 @@ public class TableStats {
                 Tuple t = iter.next();
                 numTuples++;
 
-                // TODO: and here?
+                for(int i = 0; i < numFields; i++) {
+                    Type type = tupleDesc.getFieldType(i);
+                    if (type == Type.INT_TYPE) {
+                        IntStatistics intStat = (IntStatistics) stats.get(i);
+                        IntField field = (IntField) t.getField(i);
+                        intStat.addValue(field.getValue());
+                    } else if (type == Type.STRING_TYPE) {
+                        StringHistogram stringHist = (StringHistogram) stats.get(i);
+                        StringField field = (StringField) t.getField(i);
+                        stringHist.addValue(field.getValue());
+                    }
+                }
             }
             iter.close();
         } catch (DbException e) {
@@ -125,7 +148,7 @@ public class TableStats {
      */
     public double estimateScanCost() {
         // TODO: some code goes here
-        return 0;
+        return ioCostPerPage * numPages;
     }
 
     /**
@@ -139,7 +162,7 @@ public class TableStats {
      */
     public int estimateTableCardinality(double selectivityFactor) {
         // TODO: some code goes here
-        return 0;
+        return (int) (numTuples * selectivityFactor);
     }
 
     /**
@@ -156,8 +179,15 @@ public class TableStats {
      *         predicate
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
-        // TODO: some code goes here
-        return 0;
+        Type type = tupleDesc.getFieldType(field);
+        if (type == Type.INT_TYPE) {
+            IntStatistics histgram = (IntStatistics) stats.get(field);
+            return histgram.estimateSelectivity(op, ((IntField) constant).getValue());
+        } else if (type == Type.STRING_TYPE) {
+            StringHistogram histogram = (StringHistogram) stats.get(field);
+            return histogram.estimateSelectivity(op, ((StringField) constant).getValue());
+        }
+        return 0.0;
     }
 
     /**
@@ -171,7 +201,7 @@ public class TableStats {
      * expected selectivity. You may estimate this value from the histograms.
      * */
     public double avgSelectivity(int field, Predicate.Op op) {
-        // optional: implement for a more nuanced estimation, or for skillz
+        // optional: implement for a more nuanced estimation, or for skillzzzz
         return 1.0;
     }
 

@@ -84,12 +84,39 @@ public class IntStatistics {
                 }
                 return 1 - (double)1/numDistinct;
             case GREATER_THAN:
+                if (v < low) {
+                    return 1.0;
+                }
+                if (v > high) {
+                    return 0.0;
+                }
                 return (double)(high-v)/(high-low);
             case LESS_THAN:
+                if (v > high) {
+                    return 1.0;
+                }
+                if (v < low) {
+                    return 0;
+                }
+                if ( (v < low) || (v > high)) {
+                    return 0.0;
+                }
                 return (double)(v-low)/(high-low);
             case GREATER_THAN_OR_EQ:
+                if (v <= low) {
+                    return 1.0;
+                }
+                if (v >= high) {
+                    return 0.0;
+                }
                 return (double)(high-v+1)/(high-low);
             case LESS_THAN_OR_EQ:
+                if (v >= high) {
+                    return 1.0;
+                }
+                if (v <= low) {
+                    return 0;
+                }
                 return (double)(v-low+1)/(high-low);
             default:
                 return -1.0;
