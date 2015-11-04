@@ -104,7 +104,6 @@ public class TableStats {
                 stats.add(stringHist);
             }
         }
-
         final DbFileIterator iter = file.iterator(null);
         try {
             iter.open();
@@ -112,7 +111,6 @@ public class TableStats {
             while (iter.hasNext()) {
                 Tuple t = iter.next();
                 numTuples++;
-
                 for(int i = 0; i < numFields; i++) {
                     Type type = tupleDesc.getFieldType(i);
                     if (type == Type.INT_TYPE) {
