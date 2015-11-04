@@ -204,6 +204,25 @@ public class JoinOptimizer {
      *         order in which they should be executed.
      * @throws ParsingException
      */
+    // public Vector<LogicalJoinNode> orderGreedyJoins(
+    //         HashMap<String, TableStats> stats,
+    //         HashMap<String, Double> filterSelectivities)
+    //         throws ParsingException {
+
+    //     // keeps track of the order of joins we will execute in our final plan
+    //     Vector<LogicalJoinNode> plan = new Vector<>();
+
+    //     // each LogicalJoinNode represents an intermediate join table, and this
+    //     // vector represents the cardinality of that table
+    //     Vector<Integer> planCardinalities = new Vector<>();
+
+    //     // Likewise for this vector, except for costs of creating those intermediate tables
+    //     Vector<Double> planCosts = new Vector<>();
+
+    //     // TODO: IMPLEMENT ME
+
+    //     return plan;
+    // }
     public Vector<LogicalJoinNode> orderGreedyJoins(
             HashMap<String, TableStats> stats,
             HashMap<String, Double> filterSelectivities)
@@ -219,7 +238,30 @@ public class JoinOptimizer {
         // Likewise for this vector, except for costs of creating those intermediate tables
         Vector<Double> planCosts = new Vector<>();
 
-        // TODO: IMPLEMENT ME
+        //Started writing shit.
+        Vector<LogicalJoinNode> joinsLeft = joins;
+
+        while (!joinsLeft.isEmpty()) {
+            int cardinals = Integer.MAX_VALUE;
+            double costco = Double.MAX_VALUE;
+            Vector<LogicalJoinNode> temp = new Vector<>();
+            LogicalJoinNode best = joinsLeft.get(0);
+            for (int i = 0; i < joinsLeft.size(); i++) {
+                LogicalJoinNode spock =joinsLeft.get(i);
+                CostCard hosmer = costGreedyJoin(spock, plan, planCardinalities, planCosts, stats, filterSelectivities);
+                double kozma = hosmer.cost;
+                if (kozma < costco) {
+                    costco = kozma;
+                    cardinals = hosmer.card;
+                    temp = hosmer.plan;
+                    best = spock;
+                }
+            }
+            plan.add(best);
+            joinsLeft.remove(best);
+            planCardinalities.add(cardinals);
+            planCosts.add(costco);
+        }
 
         return plan;
     }
