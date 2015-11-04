@@ -238,29 +238,33 @@ public class JoinOptimizer {
         // Likewise for this vector, except for costs of creating those intermediate tables
         Vector<Double> planCosts = new Vector<>();
 
-        //Started writing shit.
-        Vector<LogicalJoinNode> joinsLeft = joins;
+        //all the joins
+        Vector<LogicalJoinNode> joinsLeft = new Vector<>(joins);
 
         while (!joinsLeft.isEmpty()) {
-            int cardinals = Integer.MAX_VALUE;
-            double costco = Double.MAX_VALUE;
-            Vector<LogicalJoinNode> temp = new Vector<>();
-            LogicalJoinNode best = joinsLeft.get(0);
-            for (int i = 0; i < joinsLeft.size(); i++) {
-                LogicalJoinNode spock =joinsLeft.get(i);
-                CostCard hosmer = costGreedyJoin(spock, plan, planCardinalities, planCosts, stats, filterSelectivities);
-                double kozma = hosmer.cost;
-                if (kozma < costco) {
-                    costco = kozma;
-                    cardinals = hosmer.card;
-                    temp = hosmer.plan;
-                    best = spock;
+
+            CostCard cheapest = new CostCard();
+            cheapest.plan = null;
+            cheapest.cost = Double.MAX_VALUE;
+            cheapest.card = Integer.MAX_VALUE;
+            LogicalJoinNode best = null;
+
+            for (LogicalJoinNode joinNode : joinsLeft) {
+                CostCard planCostCard = costGreedyJoin(joinNode, plan, planCardinalities, planCosts,
+                        stats, filterSelectivities);
+                if (planCostCard != null) {
+                    if (planCostCard.cost < cheapest.cost) {
+                        cheapest = planCostCard;
+                        best = joinNode;
+                    }
                 }
             }
-            plan.add(best);
-            joinsLeft.remove(best);
-            planCardinalities.add(cardinals);
-            planCosts.add(costco);
+            if (best != null) {
+                plan.add(best);
+                joinsLeft.remove(best);
+                planCardinalities.add(cheapest.card);
+                planCosts.add(cheapest.cost);
+            }
         }
 
         return plan;
@@ -292,11 +296,11 @@ public class JoinOptimizer {
                 best.cost = Double.MAX_VALUE;
                 best.card = Integer.MAX_VALUE;
                 for (LogicalJoinNode joinNode : joinSet) {
-                    CostCard plancost = computeCostAndCardOfSubplan(stats, filterSelectivities,
+                    CostCard planCostCard = computeCostAndCardOfSubplan(stats, filterSelectivities,
                             joinNode, joinSet, best.cost, cache);
-                    if (plancost != null) {
-                        if (plancost.cost < best.cost) {
-                            best = plancost;
+                    if (planCostCard != null) {
+                        if (planCostCard.cost < best.cost) {
+                            best = planCostCard;
                         }
                         cache.addPlan(joinSet, best.cost, best.card, best.plan);
                     }
