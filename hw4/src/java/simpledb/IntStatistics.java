@@ -1,5 +1,8 @@
 package simpledb;
 
+import java.lang.Integer;
+import java.util.ArrayList;
+
 /** A class to represent statistics for a single integer-based field.
  */
 public class IntStatistics {
@@ -9,6 +12,9 @@ public class IntStatistics {
     private int numTuples;
     private int numDistinctTuples;
     private final boolean[] distinctInts;
+
+    private int high;
+    private int low;
 
     // TODO: IMPLEMENT ME
 
@@ -23,6 +29,9 @@ public class IntStatistics {
         numTuples = 0;
         numDistinctTuples = 0;
         distinctInts = new boolean[bins];
+
+        high = Integer.MIN_VALUE;
+        low = Integer.MAX_VALUE;
 
         // TODO: IMPLEMENT ME
     }
@@ -40,7 +49,12 @@ public class IntStatistics {
             distinctInts[index] = true;
             numDistinctTuples++;
         }
-
+        if (v > high) {
+            high = v;
+        }
+        if (v < low) {
+            low = v;
+        }
         numTuples++;
     }
 
@@ -58,8 +72,28 @@ public class IntStatistics {
         // the approximate number of distinct tuples we've seen in total
         double numDistinct = ((double) numTuples) * numDistinctTuples / distinctInts.length;
 
-        // TODO: IMPLEMENT ME
-        return -1.0;
+        switch (op) {
+            case EQUALS:
+                if ((v < low) || (v > high)) {
+                    return 0.0;
+                }
+                return (double) 1/numDistinct;
+            case NOT_EQUALS:
+                if ( (v < low) || (v > high)) {
+                    return 1.0;
+                }
+                return 1 - (double)1/numDistinct;
+            case GREATER_THAN:
+                return (double)(high-v)/(high-low);
+            case LESS_THAN:
+                return (double)(v-low)/(high-low);
+            case GREATER_THAN_OR_EQ:
+                return (double)(high-v+1)/(high-low);
+            case LESS_THAN_OR_EQ:
+                return (double)(v-low+1)/(high-low);
+            default:
+                return -1.0;
+        }
     }
 
     /**
