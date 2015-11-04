@@ -88,9 +88,22 @@ public class TableStats {
         tupleDesc = file.getTupleDesc();
         numPages = ((HeapFile) file).numPages();
         numTuples = 0;
+        HashMap<String, StringHistogram> sattr = new HashMap<String, StringHistogram>();
+        HashMap<String, IntStatistics> hint = new HashMap<String, IntStatistics>();
 
         int numFields = tupleDesc.numFields();
 
+        for (int i = 0; i < numFields; i++) {
+            if (tupleDesc.getFieldType(i).getLen() == 4) {
+                IntStatistics mint = new IntStatistics(NUM_HIST_BINS);
+                hint.put(tupleDesc.getFieldName(i), mint);
+            }
+            else {
+                StringHistogram saddr = new StringHistogram(NUM_HIST_BINS);
+                sattr.put(tupleDesc.getFieldName(i), saddr);
+            }
+        }
+        
         // TODO: what goes here?
 
         final DbFileIterator iter = file.iterator(null);
@@ -100,7 +113,14 @@ public class TableStats {
             while (iter.hasNext()) {
                 Tuple t = iter.next();
                 numTuples++;
-
+                for (Field f: t.fields()) {
+                    if (f instanceof IntField) {
+                        hint.get(f.getValue()).addValue(f.getValue());
+                    }
+                    else {
+                        saddr.get(f.getValue()).addValue(f.getValue());
+                    }
+                }
                 // TODO: and here?
             }
             iter.close();
@@ -125,7 +145,7 @@ public class TableStats {
      */
     public double estimateScanCost() {
         // TODO: some code goes here
-        return 0;
+        return this.ioCostPerPage*numPages;
     }
 
     /**
@@ -139,7 +159,7 @@ public class TableStats {
      */
     public int estimateTableCardinality(double selectivityFactor) {
         // TODO: some code goes here
-        return 0;
+        return (int)selectivityFactor*numTuples;
     }
 
     /**
