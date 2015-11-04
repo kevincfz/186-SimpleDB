@@ -108,9 +108,7 @@ public class JoinOptimizer {
             return card1 + cost1 + cost2;
         } else {
 
-            // TODO: IMPLEMENT ME
-
-            return -1.0;
+            return cost1 + card1 * cost2 + card1 * card2;
         }
     }
 
@@ -154,11 +152,18 @@ public class JoinOptimizer {
             String field2PureName, int card1, int card2, boolean t1pkey,
             boolean t2pkey, Map<String, TableStats> stats,
             Map<String, Integer> tableAliasToId) {
-        int card = 1;
 
-        // TODO: IMPLEMENT ME
-
-        return card <= 0 ? 1 : card;
+        if (joinOp == Predicate.Op.EQUALS) {
+            if (t1pkey) {
+                return card2;
+            } else if (t2pkey) {
+                return card1;
+            } else {
+                return Math.max(card1, card2);
+            }
+        } else {
+            return (int)(0.3 * card1 * card2);
+        }
     }
 
     /**
@@ -234,9 +239,31 @@ public class JoinOptimizer {
             HashMap<String, Double> filterSelectivities)
             throws ParsingException {
 
-        // TODO: some code goes here
+        PlanCache cache = new PlanCache();
+        Set<LogicalJoinNode> allJoins = new HashSet<>(joins);
 
-        return null; //replace me
+        for (int i = 1; i <= joins.size(); i += 1){
+            for(Set<LogicalJoinNode> joinSet : enumerateSubsets(joins, i)) {
+
+                CostCard best = new CostCard();
+                best.plan = null;
+                best.cost = Double.MAX_VALUE;
+                best.card = Integer.MAX_VALUE;
+                for (LogicalJoinNode joinNode : joinSet) {
+                    CostCard plancost = computeCostAndCardOfSubplan(stats, filterSelectivities,
+                            joinNode, joinSet, best.cost, cache);
+                    if (plancost != null) {
+                        if (plancost.cost < best.cost) {
+                            best = plancost;
+                        }
+                        cache.addPlan(joinSet, best.cost, best.card, best.plan);
+                    }
+                }
+
+            }
+        }
+
+        return cache.getOrder(allJoins);
     }
 
     // ===================== Private Methods =================================
