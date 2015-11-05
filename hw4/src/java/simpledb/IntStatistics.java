@@ -96,7 +96,7 @@ public class IntStatistics {
                     return 1.0;
                 }
                 if (v < low) {
-                    return 0;
+                    return 0.0;
                 }
                 if ( (v < low) || (v > high)) {
                     return 0.0;
@@ -106,7 +106,7 @@ public class IntStatistics {
                 if (v <= low) {
                     return 1.0;
                 }
-                if (v >= high) {
+                if (v > high) {
                     return 0.0;
                 }
                 return (double)(high-v+1)/(high-low);
@@ -114,8 +114,8 @@ public class IntStatistics {
                 if (v >= high) {
                     return 1.0;
                 }
-                if (v <= low) {
-                    return 0;
+                if (v < low) {
+                    return 0.0;
                 }
                 return (double)(v-low+1)/(high-low);
             default:
