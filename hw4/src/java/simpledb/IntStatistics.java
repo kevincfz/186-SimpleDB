@@ -107,7 +107,7 @@ public class IntStatistics {
                     return 1.0;
                 }
                 if (v > high) {
-                    return 0.0;
+                    return 0.0; //hmm
                 }
                 return (double)(high-v+1)/(high-low);
             case LESS_THAN_OR_EQ:
