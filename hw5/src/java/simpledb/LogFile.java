@@ -19,7 +19,7 @@ import java.lang.reflect.*;
  * pages (on checkpoints and recovery.)  This can lead to deadlock.  For
  * that reason, any LogFile operation that needs to access the BufferPool
  * must not be declared synchronized and must begin with a block like:
- * 
+ *
  *   synchronized (Database.getBufferPool()) {
  *     synchronized (this) {
  *
@@ -119,7 +119,7 @@ public class LogFile {
     public synchronized int getTotalRecords() {
         return totalRecords;
     }
-    
+
     /** Write an abort record to the log for the specified tid, force
         the log to disk, and perform a rollback
         @param tid The aborting transaction.
@@ -438,53 +438,70 @@ public class LogFile {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
                 preAppend();
-                Long start = tidToFirstLogRecord.get(tid.getId());
-                if (start == null) {
-                    return;
-                }
-                Set<PageId> pagesToRollback = new HashSet<PageId>();
-                raf.seek(start); //move the raf pointer to the start of xact
-                while (raf.getFilePointer() < currentOffset) {
-                    int type = raf.readInt();
-                    long recordTid = raf.readLong();
-
-                    switch (type) {
-                        // everytime we see an update record, we look at the before image
-                        // to see if we have already rolled back this page. If so, we do not
-                        // roll back again.  If not, that means this is the first update related
-                        // to this page, and therefore the first before image is the page we
-                        // want to roll back to
-                        case UPDATE_RECORD:
-                            Page beforeImage = readPageData(raf);
-                            PageId pid = beforeImage.getId();
-                            readPageData(raf);
-                            if (tid.getId() == recordTid) {
-                                if (pagesToRollback.contains(pid)) {
-                                    break;
-                                } else {
-                                    pagesToRollback.add(pid);
-                                    DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
-                                    dbFile.writePage(beforeImage);
-                                    Database.getBufferPool().discardPage(pid);
-                                }
-                            }
-                            break;
-                        case CHECKPOINT_RECORD:
-                            int numXactions = raf.readInt();
-                            for (int i = 0; i < numXactions; i += 1) {
-                                raf.readLong();
-                                raf.readLong();
-                            }
-                            break;
-                    }
-                    raf.readLong();
-
-
-                }
-                raf.seek(currentOffset);
+                rollback(tid.getId());
             }
         }
     }
+
+    public void rollback(Long tid) throws NoSuchElementException, IOException {
+        Set<PageId> pagesToRollback = new HashSet<PageId>();
+        long curOffset = raf.getFilePointer();
+
+        //find the where to start
+        Long start = tidToFirstLogRecord.get(tid);
+        if (start == null) return;
+
+        //find where to end
+        long end;
+        if (currentOffset == -1) {
+            end = raf.length();
+        } else {
+            end = currentOffset;
+        }
+
+        raf.seek(start); //move the raf pointer to the start of xact
+
+        while (raf.getFilePointer() < end) {
+            int type = raf.readInt();
+            long recordTid = raf.readLong();
+
+            switch (type) {
+                // every time we see an update record, we look at the before image
+                // to see if we have already rolled back this page. If so, we do not
+                // roll back again.  If not, that means this is the first update related
+                // to this page, and therefore the first before image is the page we
+                // want to roll back to
+                case UPDATE_RECORD:
+                    Page beforeImage = readPageData(raf);
+                    PageId pid = beforeImage.getId();
+                    readPageData(raf);
+                    if (tid == recordTid) {
+                        if (pagesToRollback.contains(pid)) {
+                            break;
+                        } else {
+                            pagesToRollback.add(pid);
+                            DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
+                            dbFile.writePage(beforeImage);
+                            Database.getBufferPool().discardPage(pid);
+                        }
+                    }
+                    break;
+                case CHECKPOINT_RECORD:
+                    int numXactions = raf.readInt();
+                    for (int i = 0; i < numXactions; i += 1) {
+                        raf.readLong();
+                        raf.readLong();
+                    }
+                    break;
+            }
+            // in the end we just read long again
+            raf.readLong();
+        }
+        raf.seek(curOffset);
+    }
+
+
+
 
     /** Shutdown the logging system, writing out whatever state
         is necessary so that start up can happen quickly (without
@@ -508,9 +525,59 @@ public class LogFile {
         synchronized (Database.getBufferPool()) {
             synchronized (this) {
                 recoveryUndecided = false;
-                // some code goes here
+
+                Set<Long> loserXactions = new HashSet<Long>();
+
+                raf.seek(0);
+                long lastCheckPoint = raf.readLong();
+                if (lastCheckPoint > 0) {
+                    raf.seek(lastCheckPoint);
+                    raf.readInt();
+                    raf.readLong();
+                    int numXactions = raf.readInt();
+                    for (int i = 0; i < numXactions; i += 1) {
+                        long activeTID = raf.readLong();
+                        loserXactions.add(activeTID);
+                        tidToFirstLogRecord.put(activeTID, raf.readLong());
+                    }
+                    raf.readLong();
+                }
+                while (raf.getFilePointer() < raf.length()) {
+                    long offset = raf.getFilePointer();
+                    int type = raf.readInt();
+                    long tid = raf.readLong();
+
+                    switch (type) {
+                        case BEGIN_RECORD:
+                            loserXactions.add(tid);
+                            tidToFirstLogRecord.put(tid, offset);//gg
+                            break;
+
+                        case ABORT_RECORD:
+                            rollback(tid);
+                            loserXactions.remove(tid);
+                            break;
+
+                        case COMMIT_RECORD:
+                            loserXactions.remove(tid);
+                            break;
+
+                        case UPDATE_RECORD:
+                            Page beforeImage = readPageData(raf);
+                            Page afterImage = readPageData(raf);
+                            PageId pid = afterImage.getId();
+                            DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
+                            dbFile.writePage(afterImage);
+                            Database.getBufferPool().discardPage(pid);
+                    }
+                    raf.readLong();
+                }
+                currentOffset = raf.getFilePointer();
+                for (Long loserTID: loserXactions) {
+                    rollback(loserTID);
+                }
             }
-         }
+        }
     }
 
     /** Print out a human readable represenation of the log */
