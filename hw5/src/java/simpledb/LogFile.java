@@ -438,7 +438,50 @@ public class LogFile {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
                 preAppend();
-                // some code goes here
+                Long start = tidToFirstLogRecord.get(tid.getId());
+                if (start == null) {
+                    return;
+                }
+                Set<PageId> pagesToRollback = new HashSet<>();
+                raf.seek(start); //move the raf pointer to the start of xact
+                while (raf.getFilePointer() < currentOffset) {
+                    int type = raf.readInt();
+                    long recordTid = raf.readLong();
+
+                    switch (type) {
+                        // everytime we see an update record, we look at the before image
+                        // to see if we have already rolled back this page. If so, we do not
+                        // roll back again.  If not, that means this is the first update related
+                        // to this page, and therefore the first before image is the page we
+                        // want to roll back to
+                        case UPDATE_RECORD:
+                            Page beforeImage = readPageData(raf);
+                            PageId pid = beforeImage.getId();
+                            readPageData(raf);
+                            if (tid.getId() == recordTid) {
+                                if (pagesToRollback.contains(pid)) {
+                                    break;
+                                } else {
+                                    pagesToRollback.add(pid);
+                                    DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
+                                    dbFile.writePage(beforeImage);
+                                    Database.getBufferPool().discardPage(pid);
+                                }
+                            }
+                            break;
+                        case CHECKPOINT_RECORD:
+                            int numXactions = raf.readInt();
+                            for (int i = 0; i < numXactions; i += 1) {
+                                raf.readLong();
+                                raf.readLong();
+                            }
+                            break;
+                    }
+                    raf.readLong();
+
+
+                }
+                raf.seek(currentOffset);
             }
         }
     }
