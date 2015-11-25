@@ -480,18 +480,22 @@ public class LogFile {
                             break;
                         } else {
                             pagesToRollback.add(pid);
-                            DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
-                            dbFile.writePage(beforeImage);
+                            Database.getCatalog().getDbFile(pid.getTableId()).writePage(beforeImage);
                             Database.getBufferPool().discardPage(pid);
                         }
                     }
                     break;
+
+                //do nothing for the checkpoint cases, but have to go over extra bytes
                 case CHECKPOINT_RECORD:
                     int numXactions = raf.readInt();
                     for (int i = 0; i < numXactions; i += 1) {
                         raf.readLong();
                         raf.readLong();
                     }
+                    break;
+
+                default:
                     break;
             }
             // in the end we just read long again
@@ -542,6 +546,7 @@ public class LogFile {
                     }
                     raf.readLong();
                 }
+
                 while (raf.getFilePointer() < raf.length()) {
                     long offset = raf.getFilePointer();
                     int type = raf.readInt();
@@ -566,16 +571,20 @@ public class LogFile {
                             Page beforeImage = readPageData(raf);
                             Page afterImage = readPageData(raf);
                             PageId pid = afterImage.getId();
-                            DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
-                            dbFile.writePage(afterImage);
+                            Database.getCatalog().getDbFile(pid.getTableId()).writePage(afterImage);
                             Database.getBufferPool().discardPage(pid);
+
+                        default:
+                            break;
                     }
                     raf.readLong();
                 }
-                currentOffset = raf.getFilePointer();
+
+                // second pass, just undo all the xacts in losers set
                 for (Long loserTID: loserXactions) {
                     rollback(loserTID);
                 }
+                currentOffset = raf.getFilePointer();
             }
         }
     }
