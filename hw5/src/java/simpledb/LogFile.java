@@ -442,7 +442,7 @@ public class LogFile {
                 if (start == null) {
                     return;
                 }
-                Set<PageId> pagesToRollback = new HashSet<>();
+                Set<PageId> pagesToRollback = new HashSet<PageId>();
                 raf.seek(start); //move the raf pointer to the start of xact
                 while (raf.getFilePointer() < currentOffset) {
                     int type = raf.readInt();
