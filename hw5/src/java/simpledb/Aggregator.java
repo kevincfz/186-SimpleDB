@@ -1,66 +1,60 @@
-package simpledb;
+import java.util.HashMap;
+public class Solution {
+    public String minWindow(String s, String t) {
+        HashMap<Character, Integer> tChars = new HashMap<>();
+        HashMap<Character, Integer> inWindow = new HashMap<>();
+        int resultP1 = -1;
+        int resultP2 = -1;
+        int foundSoFar = 0;
+        int p1 = 0;
+        int p2 = 0;
+        int min = Integer.MAX_VALUE;
 
-import java.io.Serializable;
-
-/**
- * The common interface for any class that can compute an aggregate over a
- * list of Tuples.
- */
-public interface Aggregator extends Serializable {
-    static final int NO_GROUPING = -1;
-
-    public enum Op implements Serializable {
-        MIN, MAX, SUM, AVG, COUNT;
-
-        /**
-         * Interface to access operations by a string containing an integer
-         * index for command-line convenience.
-         *
-         * @param s a string containing a valid integer Op index
-         */
-        public static Op getOp(String s) {
-            return getOp(Integer.parseInt(s));
+        // set up the hashMaps
+        for (int k = 0; k < t.length(); k += 1) {
+            Character currentChar = t.charAt(k);
+            if (!tChars.containsKey(currentChar)) {
+                tChars.put(currentChar, 1);
+            } else {
+                tChars.put(currentChar, tChars.get(currentChar) + 1);
+            }
         }
 
-        /**
-         * Interface to access operations by integer value for command-line
-         * convenience.
-         *
-         * @param i a valid integer Op index
-         */
-        public static Op getOp(int i) {
-            return values()[i];
+        while (p2 < s.length()) {
+            char currentChar = t.charAt(p2);
+
+            //correctly increment the character we encounter, if they are what we need
+            if (tChars.contains(currentChar)) {
+                if (inWindow.contains(currentChar)) {
+                    inWindow.put(currentChar, inWindow.get(currentChar) + 1);
+                    foundSoFar += 1;
+                } else {
+                    inWindow.put(currentChar, 1);
+                }
+            }
+
+            if (foundSoFar == t.length()) {
+                char p1Char = t.charAt(p1);
+                while (!tChars.contains(p1Char)) {
+                    p1 += 1;
+                }
+
+                while (inWindow.contains(p1Char) && inWindow.get(p1Char) > tChar.get(p1Char)) {
+                    inWindow.put(p1Char, inWindow.get(p1Char) - 1);
+                    p1 += 1;
+                }
+                if ((p2 - p1) < min) {
+                    min  = p2 - p1;
+                    resultP1 = p1;
+                    resultP2 = p2;
+                }
+
+            }
+            p2 += 1;
         }
-        
-        public String toString()
-        {
-        	if (this==MIN)
-        		return "min";
-        	if (this==MAX)
-        		return "max";
-        	if (this==SUM)
-        		return "sum";
-        	if (this==AVG)
-        		return "avg";
-        	if (this==COUNT)
-        		return "count";
-        	throw new IllegalStateException("impossible to reach here");
+        if (resultP1 = -1) {
+            return "";
         }
+        return S.substring(resultP1, resultP2 + 1);
     }
-
-    /**
-     * Merge a new tuple into the aggregate for a distinct group value;
-     * creates a new group aggregate result if the group value has not yet
-     * been encountered.
-     *
-     * @param tup the Tuple containing an aggregate field and a group-by field
-     */
-    public void mergeTupleIntoGroup(Tuple tup);
-
-    /**
-     * Create a DbIterator over group aggregate results.
-     * @see simpledb.TupleIterator for a possible helper
-     */
-    public DbIterator iterator();
-    
 }
